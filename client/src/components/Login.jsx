@@ -5,6 +5,7 @@ import { Eye, EyeOff } from "lucide-react";
 import axios from "axios";
 import styles from "./Login.module.css";
 
+// Backend URL from env
 const API_BASE_URL =
   import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
@@ -20,21 +21,31 @@ const Login = () => {
   const [loginError, setLoginError] = useState("");
 
   useEffect(() => {
-    console.log("The user is authenticated");
-  }, [navigate]);
+    console.log("Login component mounted");
+  }, []);
 
   const onSubmit = async (data) => {
-    console.log(data);
+    console.log("Form submitted:", data);
 
     try {
+      // Correct API endpoint
       const response = await axios.post(`${API_BASE_URL}/user/login`, data);
 
+      console.log("Backend response:", response.data);
+
       if (response.status === 200) {
+        // Redirect to dashboard
         navigate(`/dashboard/${data.username}`);
       }
     } catch (error) {
-      console.log("Error while sending data", error);
-      setLoginError("Invalid username or password.");
+      // More detailed error logging
+      console.error(
+        "Login error:",
+        error.response?.data || error.message || error
+      );
+      setLoginError(
+        error.response?.data?.message || "Invalid username or password."
+      );
     }
   };
 
@@ -49,9 +60,6 @@ const Login = () => {
               type="text"
               {...register("username", {
                 required: "Username is required",
-                pattern: {
-                  message: "Invalid Username",
-                },
               })}
               className={styles.input}
               placeholder="Username"
