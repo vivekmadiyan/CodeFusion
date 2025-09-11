@@ -5,6 +5,10 @@ import { Eye, EyeOff } from "lucide-react";
 import axios from "axios";
 import styles from "./Register.module.css";
 
+// ✅ Use environment variable, fallback to localhost for dev
+const API_BASE_URL =
+  import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+
 const Register = () => {
   const {
     register,
@@ -24,7 +28,7 @@ const Register = () => {
   const onSubmit = async (data) => {
     try {
       const response = await axios.post(
-        "http://localhost:5000/user/register",
+        `${API_BASE_URL}/user/register`,
         data
       );
 
@@ -138,7 +142,9 @@ const Register = () => {
               </button>
             </div>
             {errors.confirmPassword && (
-              <p className={styles.error}>{errors.confirmPassword.message}</p>
+              <p className={styles.error}>
+                {errors.confirmPassword.message}
+              </p>
             )}
           </div>
 
