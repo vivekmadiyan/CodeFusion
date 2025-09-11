@@ -8,9 +8,9 @@ export const initSocket = async () => {
     transports: ["websocket"],
   };
 
-  // Use environment variable, fallback to localhost for safety
-  const REACT_APP_BACKEND_URL =
-    process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+  // ✅ Use Vite env variable (not CRA)
+  const API_BASE_URL =
+    import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
-  return io(REACT_APP_BACKEND_URL, options);
+  return io(API_BASE_URL, options);
 };
