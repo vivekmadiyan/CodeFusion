@@ -1,14 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
-import axios from "axios";
-import styles from "./Login.module.css";
+import { api } from "../api";
+import styles from "./Register.module.css";
 
-const API_BASE_URL =
-  import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
-
-const Login = () => {
+const Register = () => {
   const {
     register,
     handleSubmit,
@@ -16,43 +12,33 @@ const Login = () => {
   } = useForm();
 
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
-  const [loginError, setLoginError] = useState("");
-
-  useEffect(() => {
-    console.log("The user is authenticated");
-  }, [navigate]);
+  const [registerError, setRegisterError] = useState("");
 
   const onSubmit = async (data) => {
-    console.log(data);
-
+    setRegisterError("");
     try {
-      const response = await axios.post(`${API_BASE_URL}/user/login`, data);
+      const response = await api.post("/user/register", data);
 
-      if (response.status === 200) {
+      if (response.status === 201 || response.status === 200) {
+        localStorage.setItem("username", data.username);
         navigate(`/dashboard/${data.username}`);
       }
     } catch (error) {
-      console.log("Error while sending data", error);
-      setLoginError("Invalid username or password.");
+      console.error("Register error:", error);
+      setRegisterError("Failed to register. Try again.");
     }
   };
 
   return (
     <div className={styles.container}>
       <div className={styles.card}>
-        <h2 className={styles.heading}>Login</h2>
+        <h2 className={styles.heading}>Register</h2>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div>
             <input
               id="username"
               type="text"
-              {...register("username", {
-                required: "Username is required",
-                pattern: {
-                  message: "Invalid Username",
-                },
-              })}
+              {...register("username", { required: "Username is required" })}
               className={styles.input}
               placeholder="Username"
             />
@@ -61,39 +47,43 @@ const Login = () => {
             )}
           </div>
 
-          <div className={styles.inputWrapper}>
+          <div>
+            <input
+              id="email"
+              type="email"
+              {...register("email", { required: "Email is required" })}
+              className={styles.input}
+              placeholder="Email"
+            />
+            {errors.email && (
+              <p className={styles.error}>{errors.email.message}</p>
+            )}
+          </div>
+
+          <div>
             <input
               id="password"
-              type={showPassword ? "text" : "password"}
-              {...register("password", {
-                required: "Password is required",
-              })}
+              type="password"
+              {...register("password", { required: "Password is required" })}
               className={styles.input}
               placeholder="Password"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className={styles.toggleButton}
-            >
-              {showPassword ? <EyeOff /> : <Eye />}
-            </button>
             {errors.password && (
               <p className={styles.error}>{errors.password.message}</p>
             )}
           </div>
 
-          {loginError && <p className={styles.error}>{loginError}</p>}
+          {registerError && <p className={styles.error}>{registerError}</p>}
 
-          <button type="submit" className={styles.button}>
-            {isSubmitting ? "Loading..." : "Sign In"}
+          <button type="submit" className={styles.button} disabled={isSubmitting}>
+            {isSubmitting ? "Registering..." : "Sign Up"}
           </button>
         </form>
 
         <p className={styles.footerText}>
-          Don't have an account?{" "}
-          <Link to="/register" className={styles.link}>
-            Sign up
+          Already have an account?{" "}
+          <Link to="/login" className={styles.link}>
+            Sign in
           </Link>
         </p>
       </div>
@@ -101,4 +91,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;
