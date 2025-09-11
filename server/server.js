@@ -3,21 +3,25 @@ import cors from "cors";
 import Connect from "./db/connection.js";
 import { app, server } from "./socket/socket.js";
 
-import authRouter from './routes/authRouter.js'
+import authRouter from "./routes/authRouter.js";
 import recordRouter from "./routes/recordRouter.js";
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
 // Routes
-app.get("/",(req, res)=>{
-    res.json("Sever is online");
-})
-app.use("/user", authRouter)
+app.get("/", (req, res) => {
+  res.json("Server is online 🚀");
+});
+app.use("/user", authRouter);
 app.use("/record", recordRouter);
 
-server.listen(5000, () => {
+// Dynamic PORT for Render
+const PORT = process.env.PORT || 5000;
+
+server.listen(PORT, () => {
   Connect();
-  console.log("Server is running");
+  console.log(`✅ Server is running on port ${PORT}`);
 });
