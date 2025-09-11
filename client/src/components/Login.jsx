@@ -5,6 +5,9 @@ import { Eye, EyeOff } from "lucide-react";
 import axios from "axios";
 import styles from "./Login.module.css";
 
+const API_BASE_URL =
+  import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+
 const Login = () => {
   const {
     register,
@@ -24,10 +27,7 @@ const Login = () => {
     console.log(data);
 
     try {
-      const response = await axios.post(
-        "http://localhost:5000/user/login",
-        data
-      );
+      const response = await axios.post(`${API_BASE_URL}/user/login`, data);
 
       if (response.status === 200) {
         navigate(`/dashboard/${data.username}`);
