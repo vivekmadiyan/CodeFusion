@@ -51,16 +51,30 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
 
   useEffect(() => {
     async function init() {
-      editorRef.current = Codemirror.fromTextArea(
-        document.getElementById("realtimeEditor"),
-        {
-          mode: { name: lang },
-          theme: editorTheme,
-          autoCloseTags: true,
-          autoCloseBrackets: true,
-          lineNumbers: true,
-        }
-      );
+      // If editor already exists, destroy it first
+      if (editorRef.current) {
+        editorRef.current.toTextArea();
+        editorRef.current = null;
+      }
+
+      const textarea = document.getElementById("realtimeEditor");
+      if (!textarea) {
+        console.error("Textarea not found");
+        return;
+      }
+
+      editorRef.current = Codemirror.fromTextArea(textarea, {
+        mode: { name: lang },
+        theme: editorTheme,
+        autoCloseTags: true,
+        autoCloseBrackets: true,
+        lineNumbers: true,
+      });
+
+      // Set existing code if any
+      if (codeData) {
+        editorRef.current.setValue(codeData);
+      }
 
       editorRef.current.on("change", (instance, changes) => {
         const { origin } = changes;
@@ -77,7 +91,14 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
     }
 
     init();
-  }, [lang]);
+
+    // Cleanup function
+    return () => {
+      if (editorRef.current) {
+        editorRef.current.toTextArea();
+      }
+    };
+  }, [lang, editorTheme]);
 
   useEffect(() => {
     if (socketRef.current) {
