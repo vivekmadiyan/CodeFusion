@@ -98,7 +98,7 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
   const handleCompile = async () => {
     if (!codeData) return;
     setProcessing(true);
-    setOutputDetails(null); // Clear previous output
+    setOutputDetails(null);
 
     // Language ID mapping for Judge0
     const LANGUAGE_IDS = {
@@ -116,8 +116,8 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
       kotlin: 78,
       swift: 83,
       xml: 75,
-      html: 63, // Uses JavaScript engine
-      css: 63, // Uses JavaScript engine
+      html: 63,
+      css: 63,
       markdown: 63,
       shell: 46,
     };
@@ -129,33 +129,44 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
     } else if (lang && lang.id) {
       languageId = lang.id;
     } else {
-      languageId = 63; // Default to JavaScript
+      languageId = 63;
     }
+
+    // Use environment variables with fallback to hardcoded values
+    // This works both in local development and production
+    const API_URL = import.meta.env.VITE_RAPID_API_URL || "https://judge0-ce.p.rapidapi.com/submissions";
+    const API_HOST = import.meta.env.VITE_RAPID_API_HOST || "judge0-ce.p.rapidapi.com";
+    const API_KEY = import.meta.env.VITE_RAPID_API_KEY || "a779558ccbmsh82b3af92f4893b7p1d1e75jsnd4b0ae3acd3f";
+
+    console.log("🚀 Compilation started");
+    console.log("API URL:", API_URL);
+    console.log("Language ID:", languageId);
+    console.log("Code length:", codeData.length);
 
     const formData = {
       language_id: languageId,
       source_code: btoa(codeData),
-      stdin: btoa(""), // Empty input
+      stdin: btoa(""),
     };
 
     const options = {
       method: "POST",
-      url: import.meta.env.VITE_RAPID_API_URL,
+      url: API_URL,
       params: { base64_encoded: "true", fields: "*" },
       headers: {
         "Content-Type": "application/json",
-        "X-RapidAPI-Host": import.meta.env.VITE_RAPID_API_HOST,
-        "X-RapidAPI-Key": import.meta.env.VITE_RAPID_API_KEY,
+        "X-RapidAPI-Host": API_HOST,
+        "X-RapidAPI-Key": API_KEY,
       },
       data: formData,
     };
 
     try {
       // Submit the code
+      console.log("📤 Submitting code to Judge0...");
       const response = await axios.request(options);
       const token = response.data.token;
-
-      console.log("Submission token:", token);
+      console.log("✅ Submission token:", token);
 
       // Poll for result
       let result;
@@ -167,18 +178,18 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
 
         const resultOptions = {
           method: "GET",
-          url: `${import.meta.env.VITE_RAPID_API_URL}/${token}`,
+          url: `${API_URL}/${token}`,
           params: { base64_encoded: "true", fields: "*" },
           headers: {
-            "X-RapidAPI-Host": import.meta.env.VITE_RAPID_API_HOST,
-            "X-RapidAPI-Key": import.meta.env.VITE_RAPID_API_KEY,
+            "X-RapidAPI-Host": API_HOST,
+            "X-RapidAPI-Key": API_KEY,
           },
         };
 
         const resultResponse = await axios.request(resultOptions);
         result = resultResponse.data;
 
-        console.log(`Attempt ${attempts + 1}:`, result.status.description);
+        console.log(`🔄 Attempt ${attempts + 1}:`, result.status.description);
 
         // Check if processing is complete (status id > 2 means done)
         if (result.status.id > 2) {
@@ -188,22 +199,32 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
         attempts++;
       }
 
-      console.log("Execution Result:", result);
+      console.log("✅ Execution Result:", result);
       setOutputDetails(result);
     } catch (err) {
+      console.error("❌ Compilation error:", err);
       const error = err.response ? err.response.data : err;
       const status = err.response?.status;
-      console.error("Compilation error:", error);
       
       if (status === 429) {
         setOutputDetails({
           status: { description: "Error" },
-          stderr: btoa("Rate limit exceeded. Please wait and try again."),
+          stderr: btoa("⏱️ Rate limit exceeded. You've used your free tier quota. Please wait and try again later."),
+        });
+      } else if (status === 401) {
+        setOutputDetails({
+          status: { description: "Error" },
+          stderr: btoa("🔑 Invalid API Key. Please check your RapidAPI credentials in environment variables."),
+        });
+      } else if (status === 403) {
+        setOutputDetails({
+          status: { description: "Error" },
+          stderr: btoa("🚫 Access forbidden. Please check your RapidAPI subscription."),
         });
       } else {
         setOutputDetails({
           status: { description: "Error" },
-          stderr: btoa(error.message || "Compilation failed. Please check your code and try again."),
+          stderr: btoa(`❌ ${error.message || "Compilation failed. Please check your code and try again."}`),
         });
       }
     } finally {
@@ -217,11 +238,11 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
       <button
         onClick={handleCompile}
         disabled={processing || !codeData}
-        className={`bg-green-500 text-white fixed top-5 right-5 px-4 py-2 rounded shadow-lg hover:bg-green-600 transition-colors ${
+        className={`bg-green-500 text-white fixed top-5 right-5 px-4 py-2 rounded shadow-lg hover:bg-green-600 transition-colors z-50 ${
           processing || !codeData ? "cursor-not-allowed opacity-50" : ""
         }`}
       >
-        {processing ? "Processing..." : "▶ Run Code"}
+        {processing ? "⏳ Processing..." : "▶ Run Code"}
       </button>
       <OutputWindow outputDetails={outputDetails} />
     </div>
