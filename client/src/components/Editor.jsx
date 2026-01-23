@@ -98,16 +98,50 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
   const handleCompile = async () => {
     if (!codeData) return;
     setProcessing(true);
+    setOutputDetails(null); // Clear previous output
+
+    // Language ID mapping for Judge0
+    const LANGUAGE_IDS = {
+      javascript: 63,
+      python: 71,
+      java: 62,
+      cpp: 54,
+      c: 50,
+      csharp: 51,
+      php: 68,
+      ruby: 72,
+      go: 60,
+      rust: 73,
+      typescript: 74,
+      kotlin: 78,
+      swift: 83,
+      xml: 75,
+      html: 63, // Uses JavaScript engine
+      css: 63, // Uses JavaScript engine
+      markdown: 63,
+      shell: 46,
+    };
+
+    // Get language ID - handle both string and object formats
+    let languageId;
+    if (typeof lang === 'string') {
+      languageId = LANGUAGE_IDS[lang.toLowerCase()] || 63;
+    } else if (lang && lang.id) {
+      languageId = lang.id;
+    } else {
+      languageId = 63; // Default to JavaScript
+    }
 
     const formData = {
-      language_id: lang.id,
+      language_id: languageId,
       source_code: btoa(codeData),
+      stdin: btoa(""), // Empty input
     };
 
     const options = {
       method: "POST",
       url: import.meta.env.VITE_RAPID_API_URL,
-      params: { base64_encoded: "true", fields: "*", wait: "true" },
+      params: { base64_encoded: "true", fields: "*" },
       headers: {
         "Content-Type": "application/json",
         "X-RapidAPI-Host": import.meta.env.VITE_RAPID_API_HOST,
@@ -117,15 +151,60 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
     };
 
     try {
+      // Submit the code
       const response = await axios.request(options);
-      console.log("Execution Result", response.data);
-      setOutputDetails(response.data);
+      const token = response.data.token;
+
+      console.log("Submission token:", token);
+
+      // Poll for result
+      let result;
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        const resultOptions = {
+          method: "GET",
+          url: `${import.meta.env.VITE_RAPID_API_URL}/${token}`,
+          params: { base64_encoded: "true", fields: "*" },
+          headers: {
+            "X-RapidAPI-Host": import.meta.env.VITE_RAPID_API_HOST,
+            "X-RapidAPI-Key": import.meta.env.VITE_RAPID_API_KEY,
+          },
+        };
+
+        const resultResponse = await axios.request(resultOptions);
+        result = resultResponse.data;
+
+        console.log(`Attempt ${attempts + 1}:`, result.status.description);
+
+        // Check if processing is complete (status id > 2 means done)
+        if (result.status.id > 2) {
+          break;
+        }
+
+        attempts++;
+      }
+
+      console.log("Execution Result:", result);
+      setOutputDetails(result);
     } catch (err) {
       const error = err.response ? err.response.data : err;
       const status = err.response?.status;
-      console.log("Error:", error);
+      console.error("Compilation error:", error);
+      
       if (status === 429) {
-        console.log("Too many requests");
+        setOutputDetails({
+          status: { description: "Error" },
+          stderr: btoa("Rate limit exceeded. Please wait and try again."),
+        });
+      } else {
+        setOutputDetails({
+          status: { description: "Error" },
+          stderr: btoa(error.message || "Compilation failed. Please check your code and try again."),
+        });
       }
     } finally {
       setProcessing(false);
@@ -138,11 +217,11 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
       <button
         onClick={handleCompile}
         disabled={processing || !codeData}
-        className={`bg-green-500 text-white fixed top-5 right-5 px-2 py-1 rounded ${
+        className={`bg-green-500 text-white fixed top-5 right-5 px-4 py-2 rounded shadow-lg hover:bg-green-600 transition-colors ${
           processing || !codeData ? "cursor-not-allowed opacity-50" : ""
         }`}
       >
-        {processing ? "Processing..." : "Compile"}
+        {processing ? "Processing..." : "▶ Run Code"}
       </button>
       <OutputWindow outputDetails={outputDetails} />
     </div>
