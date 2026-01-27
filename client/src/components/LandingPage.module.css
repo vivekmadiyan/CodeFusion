@@ -6,6 +6,22 @@
   font-family: "Inter", system-ui, sans-serif;
 }
 
+@media (max-width: 768px) {
+  .hero {
+    padding: 3.5rem 1.2rem 2.5rem;
+  }
+
+  .heroContent h1 {
+    font-size: 2.1rem;
+    line-height: 1.2;
+  }
+
+  .heroContent p {
+    font-size: 1rem;
+    margin-top: 1rem;
+  }
+}
+
 /* ================= NAVBAR ================= */
 .header {
   position: sticky;
