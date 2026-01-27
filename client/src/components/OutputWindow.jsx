@@ -1,45 +1,68 @@
 import React from "react";
 
 const OutputWindow = ({ outputDetails }) => {
-  const getOutput = () => {
-    let statusId = outputDetails?.status?.id;
+  const safeDecode = (data) => {
+    try {
+      return data ? atob(data) : "";
+    } catch {
+      return "⚠️ Unable to decode output";
+    }
+  };
 
+  const getOutput = () => {
+    const statusId = outputDetails?.status?.id;
+
+    // Compilation Error
     if (statusId === 6) {
-      // compilation error
       return (
-        <pre className="px-2 py-1 font-normal text-xs text-red-500">
-          {atob(outputDetails?.compile_output)}
-        </pre>
-      );
-    } else if (statusId === 3) {
-      return (
-        <pre className="px-2 py-1 font-normal text-xs text-green-500">
-          {atob(outputDetails.stdout) !== null
-            ? `${atob(outputDetails.stdout)}`
-            : null}
-        </pre>
-      );
-    } else if (statusId === 5) {
-      return (
-        <pre className="px-2 py-1 font-normal text-xs text-red-500">
-          {`Time Limit Exceeded`}
-        </pre>
-      );
-    } else {
-      return (
-        <pre className="px-2 py-1 font-normal text-xs text-red-500">
-          {atob(outputDetails?.stderr)}
+        <pre className="text-red-400 text-sm whitespace-pre-wrap">
+          {safeDecode(outputDetails?.compile_output)}
         </pre>
       );
     }
+
+    // Success
+    if (statusId === 3) {
+      return (
+        <pre className="text-green-400 text-sm whitespace-pre-wrap">
+          {safeDecode(outputDetails?.stdout)}
+        </pre>
+      );
+    }
+
+    // Time Limit Exceeded
+    if (statusId === 5) {
+      return (
+        <pre className="text-yellow-400 text-sm">
+          ⏱ Time Limit Exceeded
+        </pre>
+      );
+    }
+
+    // Runtime / Other errors
+    return (
+      <pre className="text-red-400 text-sm whitespace-pre-wrap">
+        {safeDecode(outputDetails?.stderr)}
+      </pre>
+    );
   };
+
   return (
-    <>
-      <h1 className="font-bold text-2xl text-white flex justify-center bg-[#1e293b] border-b">Output</h1>
-      <div className="w-full h-56 bg-[#1e293b] text-white font-normal text-2xl overflow-y-auto">
-        {outputDetails ? <>{getOutput()}</> : null}
+    <div className="w-full bg-[#020617] border-t border-white/10">
+      {/* Header */}
+      <div className="px-4 py-2 text-sm font-semibold text-gray-300 bg-[#020617]">
+        Output
       </div>
-    </>
+
+      {/* Output body */}
+      <div className="max-h-48 overflow-y-auto px-4 pb-4">
+        {outputDetails ? getOutput() : (
+          <p className="text-gray-500 text-sm">
+            Run the code to see output here…
+          </p>
+        )}
+      </div>
+    </div>
   );
 };
 

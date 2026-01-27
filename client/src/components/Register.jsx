@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, UserPlus } from "lucide-react";
 import axios from "axios";
 import styles from "./Register.module.css";
 
-// ✅ Use environment variable, fallback to localhost for dev
 const API_BASE_URL =
   import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
@@ -20,6 +19,7 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [usernameError, setUsernameError] = useState("");
+
   const username = watch("username");
   const password = watch("password");
 
@@ -38,39 +38,36 @@ const Register = () => {
         setUsernameError("Unexpected response from server.");
       }
     } catch (error) {
-      console.error("Error during registration:", error);
-
-      if (error.response) {
-        if (error.response.status === 409) {
-          setUsernameError("Username already exists");
-        } else if (error.response.data?.msg) {
-          setUsernameError(error.response.data.msg);
-        } else {
-          setUsernameError("Something went wrong on the server");
-        }
-      } else if (error.request) {
-        setUsernameError("No response from server. Check your network.");
+      if (error.response?.status === 409) {
+        setUsernameError("Username already exists");
       } else {
-        setUsernameError("Error: " + error.message);
+        setUsernameError(
+          error.response?.data?.msg ||
+            "Something went wrong. Try again."
+        );
       }
     }
   };
 
   useEffect(() => {
-    if (username) {
-      setUsernameError("");
-    }
+    if (username) setUsernameError("");
   }, [username]);
 
   return (
-    <div className={styles.container}>
+    <div className={styles.page}>
       <div className={styles.card}>
-        <h2 className={styles.heading}>Create your account</h2>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div>
+        <div className={styles.header}>
+          <UserPlus size={36} />
+          <h2>Create Account</h2>
+          <p>Join CodeFusion and start collaborating</p>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)}>
+          {/* Username */}
+          <div className={styles.field}>
             <input
-              id="username"
               type="text"
+              placeholder="Username"
               {...register("username", {
                 required: "Username is required",
                 validate: {
@@ -79,22 +76,23 @@ const Register = () => {
                     "Use lowercase letters and numbers only",
                 },
               })}
-              className={styles.input}
-              placeholder="Username"
             />
             {errors.username && (
-              <p className={styles.error}>{errors.username.message}</p>
+              <span className={styles.error}>
+                {errors.username.message}
+              </span>
             )}
             {usernameError && (
-              <p className={styles.error}>{usernameError}</p>
+              <span className={styles.error}>{usernameError}</span>
             )}
           </div>
 
-          <div>
-            <div className={styles.passwordContainer}>
+          {/* Password */}
+          <div className={styles.field}>
+            <div className={styles.passwordBox}>
               <input
-                id="password"
                 type={showPassword ? "text" : "password"}
+                placeholder="Password"
                 {...register("password", {
                   required: "Password is required",
                   minLength: {
@@ -102,66 +100,65 @@ const Register = () => {
                     message: "Minimum 8 characters required",
                   },
                 })}
-                className={styles.input}
-                placeholder="Password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className={styles.toggleButton}
               >
-                {showPassword ? <EyeOff /> : <Eye />}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
             {errors.password && (
-              <p className={styles.error}>{errors.password.message}</p>
+              <span className={styles.error}>
+                {errors.password.message}
+              </span>
             )}
           </div>
 
-          <div>
-            <div className={styles.passwordContainer}>
+          {/* Confirm Password */}
+          <div className={styles.field}>
+            <div className={styles.passwordBox}>
               <input
-                id="confirmPassword"
                 type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm Password"
                 {...register("confirmPassword", {
                   required: "Please confirm your password",
                   validate: (value) =>
                     value === password || "Passwords do not match",
                 })}
-                className={styles.input}
-                placeholder="Confirm Password"
               />
               <button
                 type="button"
                 onClick={() =>
                   setShowConfirmPassword(!showConfirmPassword)
                 }
-                className={styles.toggleButton}
               >
-                {showConfirmPassword ? <EyeOff /> : <Eye />}
+                {showConfirmPassword ? (
+                  <EyeOff size={18} />
+                ) : (
+                  <Eye size={18} />
+                )}
               </button>
             </div>
             {errors.confirmPassword && (
-              <p className={styles.error}>
+              <span className={styles.error}>
                 {errors.confirmPassword.message}
-              </p>
+              </span>
             )}
           </div>
 
           <button
             type="submit"
+            className={styles.submitBtn}
             disabled={isSubmitting}
-            className={styles.button}
           >
-            {isSubmitting ? "Registering..." : "Register"}
+            {isSubmitting ? "Registering..." : "Create Account"}
           </button>
         </form>
 
-        <p className={styles.footerText}>
+        <p className={styles.footer}>
           Already have an account?{" "}
-          <Link to="/login" className={styles.link}>
-            Sign in
-          </Link>
+          <Link to="/login">Sign in</Link>
         </p>
       </div>
     </div>

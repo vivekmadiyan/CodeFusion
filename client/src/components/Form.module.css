@@ -1,0 +1,151 @@
+/* ================= PAGE ================= */
+.page {
+  min-height: 100dvh; /* 🔥 better than 100vh on mobile */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(
+    circle at top,
+    #0f172a,
+    #020617 70%
+  );
+  font-family: "Inter", system-ui, sans-serif;
+  color: #e5e7eb;
+  position: relative;
+}
+
+
+/* ================= CARD ================= */
+.card {
+  width: 100%;
+  max-width: 420px;
+  padding: 2.6rem 2.4rem;
+  border-radius: 1.4rem;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.02)
+  );
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+.createText {
+  margin-top: 1.4rem;
+  font-size: 0.9rem;
+}
+
+.createBtn {
+  margin-left: 0.2rem;
+}
+.joinBtn {
+  margin-top: 1.2rem;
+  padding: 0.9rem;
+  font-size: 1rem;
+}
+
+.closeBtn {
+  position: absolute;
+  top: 1.2rem;
+  right: 1.2rem;
+  background: none;
+  border: none;
+  color: #f87171;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+
+/* ================= HEADER ================= */
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.logoText {
+  font-size: 2rem;
+  font-weight: 800;
+  background: linear-gradient(to right, #3b82f6, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.header p {
+  font-size: 0.9rem;
+  color: #cbd5f5;
+  margin-top: 0.4rem;
+}
+
+/* ================= INPUT ================= */
+.field {
+  margin-bottom: 1.2rem;
+}
+
+.field input {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.6rem;
+  border: none;
+  background: #020617;
+  color: #ffffff;
+}
+
+.field input::placeholder {
+  color: #94a3b8;
+}
+
+/* ================= BUTTONS ================= */
+.joinBtn {
+  width: 100%;
+  padding: 0.8rem;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(to right, #3b82f6, #a855f7);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.joinBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(168, 85, 247, 0.4);
+}
+
+/* ================= CREATE ================= */
+.createText {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.createBtn {
+  color: #a855f7;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+  .card {
+    padding: 2rem;
+    margin: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 1.6rem;
+  }
+}

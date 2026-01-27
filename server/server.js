@@ -1,3 +1,9 @@
+import dotenv from "dotenv";
+dotenv.config();
+
+console.log("🔥 ENV CHECK:", process.env.MONGODB_URI);
+
+
 import express from "express";
 import cors from "cors";
 import Connect from "./db/connection.js";
@@ -21,7 +27,7 @@ app.use("/record", recordRouter);
 // Dynamic PORT for Render
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
-  Connect();
+server.listen(PORT, async () => {
+  await Connect();
   console.log(`✅ Server is running on port ${PORT}`);
 });

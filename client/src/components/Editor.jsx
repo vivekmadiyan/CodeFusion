@@ -253,21 +253,33 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
     }
   };
 
-  return (
-    <div className="h-full w-full">
+return (
+  <div className="h-full min-h-0 flex flex-col relative">
+    {/* CODE EDITOR */}
+    <div className="flex-1 min-h-0 overflow-hidden">
       <textarea id="realtimeEditor" />
-      <button
-        onClick={handleCompile}
-        disabled={processing || !codeData}
-        className={`bg-green-500 text-white fixed top-5 right-5 px-4 py-2 rounded shadow-lg hover:bg-green-600 transition-colors z-50 ${
-          processing || !codeData ? "cursor-not-allowed opacity-50" : ""
-        }`}
-      >
-        {processing ? "⏳ Processing..." : "▶ Run Code"}
-      </button>
+    </div>
+
+    {/* OUTPUT */}
+    <div className="h-40 sm:h-56 shrink-0 overflow-y-auto border-t border-white/10 bg-[#020617]">
       <OutputWindow outputDetails={outputDetails} />
     </div>
-  );
+
+    {/* RUN BUTTON */}
+    <button
+      onClick={handleCompile}
+      disabled={processing || !codeData}
+      className={`fixed bottom-4 right-4 sm:top-5 sm:bottom-auto sm:right-5 
+        bg-green-500 text-white px-4 py-2 rounded-full shadow-lg z-50
+        ${processing || !codeData ? "opacity-50 cursor-not-allowed" : ""}
+      `}
+    >
+      {processing ? "⏳" : "▶ Run"}
+    </button>
+  </div>
+);
+
+
 };
 
 export default Editor;

@@ -19,8 +19,8 @@ const EditorPage = () => {
   const [lang, setLang] = useRecoilState(language);
   const [them, setThem] = useRecoilState(cmtheme);
 
-  const codeData = useRecoilValue(data)
-  const user = useRecoilValue(username)
+  const codeData = useRecoilValue(data);
+  const user = useRecoilValue(username);
 
   const [clients, setClients] = useState([]);
 
@@ -30,278 +30,184 @@ const EditorPage = () => {
   const { roomId } = useParams();
   const reactNavigator = useNavigate();
 
+  // ================= SOCKET =================
   useEffect(() => {
     const init = async () => {
-      if (!socketRef.current) {
+      try {
         socketRef.current = await initSocket();
-        socketRef.current.on("connect_error", (err) => handleErrors(err));
-        socketRef.current.on("connect_failed", (err) => handleErrors(err));
-      }
 
-      function handleErrors(e) {
-        console.log("socket error", e);
-        toast.error("Socket connection failed, try again later.");
-        reactNavigator("/");
-      }
+        socketRef.current.on("connect_error", handleErrors);
+        socketRef.current.on("connect_failed", handleErrors);
 
-      if (socketRef.current) {
         socketRef.current.emit(ACTIONS.JOIN, {
           roomId,
           username: location.state?.username,
         });
-      }
 
-      // Listening for joined event
-      socketRef.current.on(
-        ACTIONS.JOINED,
-        ({ clients, username, socketId }) => {
-          if (username !== location.state?.username) {
-            toast.success(`${username} joined the room.`);
-            console.log(`${username} joined`);
-          }
-          setClients(clients);
-          if (socketRef.current) {
+        socketRef.current.on(
+          ACTIONS.JOINED,
+          ({ clients, username, socketId }) => {
+            if (username !== location.state?.username) {
+              toast.success(`${username} joined the room`);
+            }
+            setClients(clients);
+
             socketRef.current.emit(ACTIONS.SYNC_CODE, {
               code: codeRef.current,
               socketId,
             });
           }
-        }
-      );
+        );
 
-      // Listening for disconnected
-      socketRef.current.on(ACTIONS.DISCONNECTED, ({ socketId, username }) => {
-        toast.success(`${username} left the room.`);
-        setClients((prev) => {
-          return prev.filter((client) => client.socketId !== socketId);
-        });
-      });
+        socketRef.current.on(
+          ACTIONS.DISCONNECTED,
+          ({ socketId, username }) => {
+            toast.success(`${username} left the room`);
+            setClients((prev) =>
+              prev.filter((c) => c.socketId !== socketId)
+            );
+          }
+        );
+      } catch (err) {
+        handleErrors(err);
+      }
     };
 
     init();
 
     return () => {
       if (socketRef.current) {
+        socketRef.current.disconnect();
         socketRef.current.off(ACTIONS.JOINED);
         socketRef.current.off(ACTIONS.DISCONNECTED);
-        socketRef.current.disconnect();
       }
     };
   }, []);
 
-  async function copyRoomId() {
-    try {
-      await navigator.clipboard.writeText(roomId);
-      toast.success("Room ID has been copied to clipboard");
-    } catch (err) {
-      toast.error("Could not copy the Room ID");
-      console.error(err);
-    }
-  }
-
-  function leaveRoom() {
+  const handleErrors = () => {
+    toast.error("Socket connection failed");
     reactNavigator("/");
-  }
+  };
 
-  if (!location.state) {
-    return <Navigate to="/" />;
-  }
+  if (!location.state) return <Navigate to="/" />;
 
+  // ================= HANDLERS =================
   const handleChange = (e) => {
-    const selectedLang = e.target.value;
-    const selectedLangId = languageOptions.find(
-      (l) => l.value === selectedLang
-    )?.id;
-
-    if (selectedLangId) {
-      setLang({ id: selectedLangId, value: selectedLang });
+    const selected = languageOptions.find(
+      (l) => l.value === e.target.value
+    );
+    if (selected) {
+      setLang({ id: selected.id, value: selected.value });
       window.location.reload();
     }
-    console.log(lang);
   };
 
-  const saveCode = async () => {
-    const formData = {
-      username: location.state?.username,
-      roomId,
-      data: codeData,
-    };
-    console.log(username, roomId, data)
+  const copyRoomId = async () => {
     try {
-      const response = await axios.post(
-        "http://localhost:5000/record/save",
-        formData
-      );
-      if(response.status === 200){
-        toast.success("Saved")
-      }
-    } catch (error) {
-      console.log(error)
+      await navigator.clipboard.writeText(roomId);
+      toast.success("Room ID copied");
+    } catch {
+      toast.error("Copy failed");
     }
   };
 
-  const str = "CodeFusion";
-  const alphabetArray = str.split("");
+  const leaveRoom = () => reactNavigator("/");
 
+  const saveCode = async () => {
+    try {
+      await axios.post("http://localhost:5000/record/save", {
+        username: user,
+        roomId,
+        data: codeData,
+      });
+      toast.success("Code saved");
+    } catch {
+      toast.error("Save failed");
+    }
+  };
+
+  // ================= UI =================
   return (
-    <div className="mainWrap">
-      <div className="aside">
-        <div className="asideInner">
-          <div className="flex items-center justify-center cursor-pointer pb-2">
-            <img
-              src="/logo.png"
-              alt="CodeFusion Logo"
-              className="size-8 hover:scale-125"
-            />
-            {alphabetArray.map((char, index) => (
-              <span className="text-3xl bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent font-bold hover:scale-125" key={index}>
-                {char}
-              </span>
-            ))}
-          </div>
-          <h3>Connected</h3>
-          <div className="clientsList">
-            {clients.map((client) => (
-              <Client key={client.socketId} username={client.username} />
-            ))}
-          </div>
+    <div className="flex h-screen bg-[#020617] text-gray-200">
+      {/* ===== SIDEBAR ===== */}
+      <aside className="w-72 min-w-[18rem] flex flex-col border-r border-white/10 p-4 overflow-y-auto">
+        <h2 className="text-2xl font-extrabold text-center bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent mb-4">
+          CodeFusion
+        </h2>
+
+        <p className="text-xs text-gray-400 uppercase mb-2">Connected</p>
+
+        <div className="flex flex-col gap-2 mb-4">
+          {clients.map((client) => (
+            <Client key={client.socketId} username={client.username} />
+          ))}
         </div>
 
-        <label>
-          Select Language:
+        <div className="mt-auto space-y-3">
           <select
             value={lang.value}
             onChange={handleChange}
-            className="seLang text-black"
+            className="w-full bg-[#020617] border border-white/10 px-2 py-1 rounded-md text-sm"
           >
-            {languageOptions.map((l, id) => (
-              <option key={id} value={l.value}>
+            {languageOptions.map((l) => (
+              <option key={l.id} value={l.value}>
                 {l.label}
               </option>
             ))}
-            {/* <option value="clike">C / C++ / C# / Java</option>
-            <option value="css">CSS</option>
-            <option value="dart">Dart</option>
-            <option value="django">Django</option>
-            <option value="dockerfile">Dockerfile</option>
-            <option value="go">Go</option>
-            <option value="htmlmixed">HTML-mixed</option>
-            <option value="javascript">JavaScript</option>
-            <option value="jsx">JSX</option>
-            <option value="markdown">Markdown</option>
-            <option value="php">PHP</option>
-            <option value="python">Python</option>
-            <option value="r">R</option>
-            <option value="rust">Rust</option>
-            <option value="ruby">Ruby</option>
-            <option value="sass">Sass</option>
-            <option value="shell">Shell</option>
-            <option value="sql">SQL</option>
-            <option value="swift">Swift</option>
-            <option value="xml">XML</option>
-            <option value="yaml">yaml</option> */}
           </select>
-        </label>
 
-        <label>
-          Select Theme:
           <select
             value={them}
             onChange={(e) => {
               setThem(e.target.value);
               window.location.reload();
             }}
-            className="seLang text-black"
+            className="w-full bg-[#020617] border border-white/10 px-2 py-1 rounded-md text-sm"
           >
-            <option value="default">default</option>
-            <option value="3024-day">3024-day</option>
-            <option value="3024-night">3024-night</option>
-            <option value="abbott">abbott</option>
-            <option value="abcdef">abcdef</option>
-            <option value="ambiance">ambiance</option>
-            <option value="ayu-dark">ayu-dark</option>
-            <option value="ayu-mirage">ayu-mirage</option>
-            <option value="base16-dark">base16-dark</option>
-            <option value="base16-light">base16-light</option>
-            <option value="bespin">bespin</option>
-            <option value="blackboard">blackboard</option>
-            <option value="cobalt">cobalt</option>
-            <option value="colorforth">colorforth</option>
-            <option value="darcula">darcula</option>
-            <option value="duotone-dark">duotone-dark</option>
-            <option value="duotone-light">duotone-light</option>
-            <option value="eclipse">eclipse</option>
-            <option value="elegant">elegant</option>
-            <option value="erlang-dark">erlang-dark</option>
-            <option value="gruvbox-dark">gruvbox-dark</option>
-            <option value="hopscotch">hopscotch</option>
-            <option value="icecoder">icecoder</option>
-            <option value="idea">idea</option>
-            <option value="isotope">isotope</option>
-            <option value="juejin">juejin</option>
-            <option value="lesser-dark">lesser-dark</option>
-            <option value="liquibyte">liquibyte</option>
-            <option value="lucario">lucario</option>
-            <option value="material">material</option>
-            <option value="material-darker">material-darker</option>
-            <option value="material-palenight">material-palenight</option>
-            <option value="material-ocean">material-ocean</option>
-            <option value="mbo">mbo</option>
-            <option value="mdn-like">mdn-like</option>
-            <option value="midnight">midnight</option>
-            <option value="monokai">monokai</option>
-            <option value="moxer">moxer</option>
-            <option value="neat">neat</option>
-            <option value="neo">neo</option>
-            <option value="night">night</option>
-            <option value="nord">nord</option>
-            <option value="oceanic-next">oceanic-next</option>
-            <option value="panda-syntax">panda-syntax</option>
-            <option value="paraiso-dark">paraiso-dark</option>
-            <option value="paraiso-light">paraiso-light</option>
-            <option value="pastel-on-dark">pastel-on-dark</option>
-            <option value="railscasts">railscasts</option>
-            <option value="rubyblue">rubyblue</option>
-            <option value="seti">seti</option>
-            <option value="shadowfox">shadowfox</option>
-            <option value="solarized">solarized</option>
-            <option value="the-matrix">the-matrix</option>
-            <option value="tomorrow-night-bright">tomorrow-night-bright</option>
-            <option value="tomorrow-night-eighties">
-              tomorrow-night-eighties
-            </option>
-            <option value="ttcn">ttcn</option>
-            <option value="twilight">twilight</option>
-            <option value="vibrant-ink">vibrant-ink</option>
-            <option value="xq-dark">xq-dark</option>
-            <option value="xq-light">xq-light</option>
-            <option value="yeti">yeti</option>
-            <option value="yonce">yonce</option>
-            <option value="zenburn">zenburn</option>
+            <option value="material">Material</option>
+            <option value="monokai">Monokai</option>
+            <option value="dracula">Dracula</option>
+            <option value="ayu-dark">Ayu Dark</option>
           </select>
-        </label>
 
-        <button className="btn bg-green-500 mb-4 hover:text-black" onClick={saveCode}>
-          Save
-        </button>
+          <button
+            onClick={saveCode}
+            className="w-full bg-green-500 py-2 rounded-md font-semibold hover:bg-green-600"
+          >
+            Save Code
+          </button>
 
-        <button className="btn copyBtn" onClick={copyRoomId}>
-          Copy ROOM ID
-        </button>
-        <button className="btn leaveBtn" onClick={leaveRoom}>
-          Leave
-        </button>
-      </div>
+          <button
+            onClick={copyRoomId}
+            className="w-full bg-white/10 py-2 rounded-md hover:bg-white/20"
+          >
+            Copy Room ID
+          </button>
 
-      <div className="editorWrap">
-        <Editor
-          socketRef={socketRef}
-          roomId={roomId}
-          onCodeChange={(code) => {
-            codeRef.current = code;
-          }}
-        />
-      </div>
+          <button
+            onClick={leaveRoom}
+            className="w-full bg-red-500/20 py-2 rounded-md text-red-400 hover:bg-red-500/30"
+          >
+            Leave Room
+          </button>
+        </div>
+      </aside>
+
+      {/* ===== EDITOR ===== */}
+{/* ===== EDITOR ===== */}
+<main className="flex-1 flex flex-col bg-[#0f172a] min-h-0">
+  <div className="flex-1 overflow-hidden min-h-0">
+    <Editor
+      socketRef={socketRef}
+      roomId={roomId}
+      onCodeChange={(code) => {
+        codeRef.current = code;
+      }}
+    />
+  </div>
+</main>
+
+
     </div>
   );
 };
