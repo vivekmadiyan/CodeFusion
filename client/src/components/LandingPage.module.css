@@ -207,7 +207,9 @@
 .footer {
   background: #020617;
   padding: 3rem 2rem;
+  margin-top: 4rem;
 }
+
 
 .footerGrid {
   max-width: 1200px;
