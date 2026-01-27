@@ -46,6 +46,7 @@ const Editor = ({ onCodeChange }) => {
   const lang = useRecoilValue(language);
   const editorTheme = useRecoilValue(cmtheme);
 
+  // 🔥 LOCAL STATE (not Recoil)
   const [codeData, setCodeData] = useState("");
   const [processing, setProcessing] = useState(false);
   const [outputDetails, setOutputDetails] = useState(null);
@@ -70,7 +71,7 @@ const Editor = ({ onCodeChange }) => {
       lineNumbers: true,
     });
 
-    // Always start blank for every user
+    // ✅ Always start empty (no shared code)
     editorRef.current.setValue("");
 
     editorRef.current.on("change", (instance, changes) => {
@@ -89,7 +90,7 @@ const Editor = ({ onCodeChange }) => {
   }, [lang, editorTheme]);
 
   // ========================
-  // Compile / Run Code
+  // COMPILE — SAME AS BEFORE
   // ========================
   const handleCompile = async () => {
     if (!codeData) return;
@@ -111,14 +112,23 @@ const Editor = ({ onCodeChange }) => {
       typescript: 74,
       kotlin: 78,
       swift: 83,
+      xml: 75,
+      html: 63,
+      css: 63,
+      markdown: 63,
       shell: 46,
     };
 
-    const languageId =
-      typeof lang === "string"
-        ? LANGUAGE_IDS[lang.toLowerCase()] || 63
-        : 63;
+    let languageId;
+    if (typeof lang === "string") {
+      languageId = LANGUAGE_IDS[lang.toLowerCase()] || 63;
+    } else if (lang?.id) {
+      languageId = lang.id;
+    } else {
+      languageId = 63;
+    }
 
+    // ✅ ORIGINAL WORKING API CONFIG
     const API_URL =
       import.meta.env.VITE_RAPID_API_URL ||
       "https://judge0-ce.p.rapidapi.com/submissions";
@@ -128,34 +138,34 @@ const Editor = ({ onCodeChange }) => {
       "judge0-ce.p.rapidapi.com";
 
     const API_KEY =
-      import.meta.env.VITE_RAPID_API_KEY ||
-      "YOUR_API_KEY_HERE";
+      import.meta.env.VITE_RAPID_API_KEY;
 
     try {
-      const submission = await axios.post(
-        API_URL,
-        {
+      const response = await axios.request({
+        method: "POST",
+        url: API_URL,
+        params: { base64_encoded: "true", fields: "*" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-RapidAPI-Host": API_HOST,
+          "X-RapidAPI-Key": API_KEY,
+        },
+        data: {
           language_id: languageId,
           source_code: btoa(codeData),
           stdin: btoa(""),
         },
-        {
-          params: { base64_encoded: "true", fields: "*" },
-          headers: {
-            "Content-Type": "application/json",
-            "X-RapidAPI-Host": API_HOST,
-            "X-RapidAPI-Key": API_KEY,
-          },
-        }
-      );
+      });
 
-      const token = submission.data.token;
+      const token = response.data.token;
 
       let result;
       for (let i = 0; i < 10; i++) {
         await new Promise((r) => setTimeout(r, 1500));
 
-        const res = await axios.get(`${API_URL}/${token}`, {
+        const res = await axios.request({
+          method: "GET",
+          url: `${API_URL}/${token}`,
           params: { base64_encoded: "true", fields: "*" },
           headers: {
             "X-RapidAPI-Host": API_HOST,
@@ -169,9 +179,10 @@ const Editor = ({ onCodeChange }) => {
 
       setOutputDetails(result);
     } catch (err) {
+      console.error("Judge0 error:", err);
       setOutputDetails({
         status: { description: "Error" },
-        stderr: btoa("Compilation failed. Try again later."),
+        stderr: btoa("Compilation failed"),
       });
     } finally {
       setProcessing(false);
