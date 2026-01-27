@@ -3,7 +3,11 @@ import toast from "react-hot-toast";
 import Client from "../components/Client";
 import Editor from "../components/Editor";
 import { language, cmtheme, username, data } from "../atoms";
-import { useRecoilState, useRecoilValue } from "recoil";
+import {
+  useRecoilState,
+  useRecoilValue,
+  useResetRecoilState,
+} from "recoil";
 import ACTIONS from "../actions/Actions";
 import { initSocket } from "../socket";
 import {
@@ -22,10 +26,13 @@ const EditorPage = () => {
   const codeData = useRecoilValue(data);
   const user = useRecoilValue(username);
 
+  const resetCode = useResetRecoilState(data);
+
   const [clients, setClients] = useState([]);
 
   const socketRef = useRef(null);
-  const codeRef = useRef(null);
+  const codeRef = useRef("");
+
   const location = useLocation();
   const { roomId } = useParams();
   const reactNavigator = useNavigate();
@@ -84,6 +91,12 @@ const EditorPage = () => {
     };
   }, []);
 
+  // ================= RESET CODE ON ROOM CHANGE =================
+  useEffect(() => {
+    resetCode();           // 🔥 Clear Recoil editor state
+    codeRef.current = "";  // 🔥 Clear socket sync buffer
+  }, [roomId]);
+
   const handleErrors = () => {
     toast.error("Socket connection failed");
     reactNavigator("/");
@@ -135,11 +148,16 @@ const EditorPage = () => {
           CodeFusion
         </h2>
 
-        <p className="text-xs text-gray-400 uppercase mb-2">Connected</p>
+        <p className="text-xs text-gray-400 uppercase mb-2">
+          Connected
+        </p>
 
         <div className="flex flex-col gap-2 mb-4">
           {clients.map((client) => (
-            <Client key={client.socketId} username={client.username} />
+            <Client
+              key={client.socketId}
+              username={client.username}
+            />
           ))}
         </div>
 
@@ -194,20 +212,17 @@ const EditorPage = () => {
       </aside>
 
       {/* ===== EDITOR ===== */}
-{/* ===== EDITOR ===== */}
-<main className="flex-1 flex flex-col bg-[#0f172a] min-h-0">
-  <div className="flex-1 overflow-hidden min-h-0">
-    <Editor
-      socketRef={socketRef}
-      roomId={roomId}
-      onCodeChange={(code) => {
-        codeRef.current = code;
-      }}
-    />
-  </div>
-</main>
-
-
+      <main className="flex-1 flex flex-col bg-[#0f172a] min-h-0">
+        <div className="flex-1 overflow-hidden min-h-0">
+          <Editor
+            socketRef={socketRef}
+            roomId={roomId}
+            onCodeChange={(code) => {
+              codeRef.current = code;
+            }}
+          />
+        </div>
+      </main>
     </div>
   );
 };
