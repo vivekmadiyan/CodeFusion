@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, LogIn } from "lucide-react";
 import axios from "axios";
 import styles from "./Login.module.css";
 
-// Backend URL from env
 const API_BASE_URL =
   import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
@@ -20,10 +19,6 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState("");
 
-  useEffect(() => {
-    console.log("Login component mounted");
-  }, []);
-
   const onSubmit = async (data) => {
     setLoginError("");
 
@@ -34,15 +29,11 @@ const Login = () => {
       );
 
       if (response.status === 200) {
-        // 🔥 IMPORTANT FIX
-        // Clear old user/editor data (recoil-persist, code editor, etc.)
+        // LOGIC SAME (as requested)
         localStorage.clear();
-
-        // Navigate to user dashboard
         navigate(`/dashboard/${data.username}`);
       }
     } catch (error) {
-      console.error("Login error:", error);
       setLoginError(
         error.response?.data?.message ||
           "Invalid username or password."
@@ -51,72 +42,71 @@ const Login = () => {
   };
 
   return (
-    <div className={styles.container}>
+    <div className={styles.page}>
       <div className={styles.card}>
-        <h2 className={styles.heading}>Login</h2>
+        <div className={styles.header}>
+          <LogIn size={36} />
+          <h2>Welcome Back</h2>
+          <p>Login to continue to CodeFusion</p>
+        </div>
 
         <form onSubmit={handleSubmit(onSubmit)}>
           {/* Username */}
-          <div>
+          <div className={styles.field}>
             <input
               type="text"
               placeholder="Username"
-              className={styles.input}
               {...register("username", {
                 required: "Username is required",
               })}
             />
             {errors.username && (
-              <p className={styles.error}>
+              <span className={styles.error}>
                 {errors.username.message}
-              </p>
+              </span>
             )}
           </div>
 
           {/* Password */}
-          <div className={styles.inputWrapper}>
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              className={styles.input}
-              {...register("password", {
-                required: "Password is required",
-              })}
-            />
-            <button
-              type="button"
-              className={styles.toggleButton}
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? <EyeOff /> : <Eye />}
-            </button>
+          <div className={styles.field}>
+            <div className={styles.passwordBox}>
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                {...register("password", {
+                  required: "Password is required",
+                })}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
             {errors.password && (
-              <p className={styles.error}>
+              <span className={styles.error}>
                 {errors.password.message}
-              </p>
+              </span>
             )}
           </div>
 
-          {/* Error */}
           {loginError && (
-            <p className={styles.error}>{loginError}</p>
+            <div className={styles.errorBox}>{loginError}</div>
           )}
 
-          {/* Submit */}
           <button
             type="submit"
-            className={styles.button}
+            className={styles.submitBtn}
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Loading..." : "Sign In"}
+            {isSubmitting ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
-        <p className={styles.footerText}>
+        <p className={styles.footer}>
           Don&apos;t have an account?{" "}
-          <Link to="/register" className={styles.link}>
-            Sign up
-          </Link>
+          <Link to="/register">Create one</Link>
         </p>
       </div>
     </div>
