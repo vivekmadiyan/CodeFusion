@@ -6,6 +6,12 @@
   min-height: 100vh;
 }
 
+.featureCard svg,
+.techStack svg,
+.socialIcons svg {
+  color: #a855f7;
+}
+
 /* ===== NAVBAR ===== */
 .header {
   position: sticky;
