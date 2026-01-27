@@ -31,14 +31,6 @@ import "codemirror/mode/shell/shell";
 // Features
 import "codemirror/addon/edit/closetag";
 import "codemirror/addon/edit/closebrackets";
-import "codemirror/addon/scroll/simplescrollbars.css";
-
-// Search
-import "codemirror/addon/search/search";
-import "codemirror/addon/search/searchcursor";
-import "codemirror/addon/search/jump-to-line";
-import "codemirror/addon/dialog/dialog";
-import "codemirror/addon/dialog/dialog.css";
 
 const Editor = ({ onCodeChange }) => {
   const editorRef = useRef(null);
@@ -46,18 +38,16 @@ const Editor = ({ onCodeChange }) => {
   const lang = useRecoilValue(language);
   const editorTheme = useRecoilValue(cmtheme);
 
-  // 🔥 LOCAL STATE (not Recoil)
   const [codeData, setCodeData] = useState("");
   const [processing, setProcessing] = useState(false);
   const [outputDetails, setOutputDetails] = useState(null);
 
   // ========================
-  // Initialize CodeMirror
+  // INIT CODEMIRROR
   // ========================
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.toTextArea();
-      editorRef.current = null;
     }
 
     const textarea = document.getElementById("realtimeEditor");
@@ -66,31 +56,27 @@ const Editor = ({ onCodeChange }) => {
     editorRef.current = Codemirror.fromTextArea(textarea, {
       mode: { name: lang },
       theme: editorTheme,
+      lineNumbers: true,
       autoCloseTags: true,
       autoCloseBrackets: true,
-      lineNumbers: true,
     });
 
-    // ✅ Always start empty (no shared code)
     editorRef.current.setValue("");
 
-    editorRef.current.on("change", (instance, changes) => {
-      if (changes.origin === "setValue") return;
-
-      const code = instance.getValue();
-      setCodeData(code);
-      onCodeChange?.(code);
+    editorRef.current.on("change", (instance, change) => {
+      if (change.origin === "setValue") return;
+      const value = instance.getValue();
+      setCodeData(value);
+      onCodeChange?.(value);
     });
 
     return () => {
-      if (editorRef.current) {
-        editorRef.current.toTextArea();
-      }
+      editorRef.current?.toTextArea();
     };
   }, [lang, editorTheme]);
 
   // ========================
-  // COMPILE — SAME AS BEFORE
+  // COMPILE (BACKEND ONLY)
   // ========================
   const handleCompile = async () => {
     if (!codeData) return;
@@ -104,85 +90,32 @@ const Editor = ({ onCodeChange }) => {
       java: 62,
       cpp: 54,
       c: 50,
-      csharp: 51,
       php: 68,
       ruby: 72,
       go: 60,
       rust: 73,
-      typescript: 74,
-      kotlin: 78,
-      swift: 83,
-      xml: 75,
-      html: 63,
-      css: 63,
-      markdown: 63,
-      shell: 46,
     };
 
-    let languageId;
-    if (typeof lang === "string") {
-      languageId = LANGUAGE_IDS[lang.toLowerCase()] || 63;
-    } else if (lang?.id) {
-      languageId = lang.id;
-    } else {
-      languageId = 63;
-    }
-
-    // ✅ ORIGINAL WORKING API CONFIG
-    const API_URL =
-      import.meta.env.VITE_RAPID_API_URL ||
-      "https://judge0-ce.p.rapidapi.com/submissions";
-
-    const API_HOST =
-      import.meta.env.VITE_RAPID_API_HOST ||
-      "judge0-ce.p.rapidapi.com";
-
-    const API_KEY =
-      import.meta.env.VITE_RAPID_API_KEY;
+    const languageId =
+      typeof lang === "string"
+        ? LANGUAGE_IDS[lang.toLowerCase()] || 63
+        : 63;
 
     try {
-      const response = await axios.request({
-        method: "POST",
-        url: API_URL,
-        params: { base64_encoded: "true", fields: "*" },
-        headers: {
-          "Content-Type": "application/json",
-          "X-RapidAPI-Host": API_HOST,
-          "X-RapidAPI-Key": API_KEY,
-        },
-        data: {
+      const response = await axios.post(
+        import.meta.env.VITE_BACKEND_URL + "/compile",
+        {
           language_id: languageId,
-          source_code: btoa(codeData),
-          stdin: btoa(""),
-        },
-      });
+          source_code: btoa(unescape(encodeURIComponent(codeData))),
+        }
+      );
 
-      const token = response.data.token;
-
-      let result;
-      for (let i = 0; i < 10; i++) {
-        await new Promise((r) => setTimeout(r, 1500));
-
-        const res = await axios.request({
-          method: "GET",
-          url: `${API_URL}/${token}`,
-          params: { base64_encoded: "true", fields: "*" },
-          headers: {
-            "X-RapidAPI-Host": API_HOST,
-            "X-RapidAPI-Key": API_KEY,
-          },
-        });
-
-        result = res.data;
-        if (result.status?.id > 2) break;
-      }
-
-      setOutputDetails(result);
+      setOutputDetails(response.data);
     } catch (err) {
-      console.error("Judge0 error:", err);
+      console.error("Compile error:", err);
       setOutputDetails({
         status: { description: "Error" },
-        stderr: btoa("Compilation failed"),
+        stderr: btoa("Compilation failed on server"),
       });
     } finally {
       setProcessing(false);
