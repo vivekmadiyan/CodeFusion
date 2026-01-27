@@ -25,26 +25,27 @@ const Login = () => {
   }, []);
 
   const onSubmit = async (data) => {
-    console.log("Form submitted:", data);
+    setLoginError("");
 
     try {
-      // Correct API endpoint
-      const response = await axios.post(`${API_BASE_URL}/user/login`, data);
-
-      console.log("Backend response:", response.data);
+      const response = await axios.post(
+        `${API_BASE_URL}/user/login`,
+        data
+      );
 
       if (response.status === 200) {
-        // Redirect to dashboard
+        // 🔥 IMPORTANT FIX
+        // Clear old user/editor data (recoil-persist, code editor, etc.)
+        localStorage.clear();
+
+        // Navigate to user dashboard
         navigate(`/dashboard/${data.username}`);
       }
     } catch (error) {
-      // More detailed error logging
-      console.error(
-        "Login error:",
-        error.response?.data || error.message || error
-      );
+      console.error("Login error:", error);
       setLoginError(
-        error.response?.data?.message || "Invalid username or password."
+        error.response?.data?.message ||
+          "Invalid username or password."
       );
     }
   };
@@ -53,53 +54,66 @@ const Login = () => {
     <div className={styles.container}>
       <div className={styles.card}>
         <h2 className={styles.heading}>Login</h2>
+
         <form onSubmit={handleSubmit(onSubmit)}>
+          {/* Username */}
           <div>
             <input
-              id="username"
               type="text"
+              placeholder="Username"
+              className={styles.input}
               {...register("username", {
                 required: "Username is required",
               })}
-              className={styles.input}
-              placeholder="Username"
             />
             {errors.username && (
-              <p className={styles.error}>{errors.username.message}</p>
+              <p className={styles.error}>
+                {errors.username.message}
+              </p>
             )}
           </div>
 
+          {/* Password */}
           <div className={styles.inputWrapper}>
             <input
-              id="password"
               type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              className={styles.input}
               {...register("password", {
                 required: "Password is required",
               })}
-              className={styles.input}
-              placeholder="Password"
             />
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
               className={styles.toggleButton}
+              onClick={() => setShowPassword(!showPassword)}
             >
               {showPassword ? <EyeOff /> : <Eye />}
             </button>
             {errors.password && (
-              <p className={styles.error}>{errors.password.message}</p>
+              <p className={styles.error}>
+                {errors.password.message}
+              </p>
             )}
           </div>
 
-          {loginError && <p className={styles.error}>{loginError}</p>}
+          {/* Error */}
+          {loginError && (
+            <p className={styles.error}>{loginError}</p>
+          )}
 
-          <button type="submit" className={styles.button}>
+          {/* Submit */}
+          <button
+            type="submit"
+            className={styles.button}
+            disabled={isSubmitting}
+          >
             {isSubmitting ? "Loading..." : "Sign In"}
           </button>
         </form>
 
         <p className={styles.footerText}>
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link to="/register" className={styles.link}>
             Sign up
           </Link>
