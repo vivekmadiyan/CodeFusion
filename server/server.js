@@ -13,7 +13,17 @@ import authRouter from "./routes/authRouter.js";
 import recordRouter from "./routes/recordRouter.js";
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+      "https://taskflow-app-dun.vercel.app",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 app.use(express.static("public"));
 
