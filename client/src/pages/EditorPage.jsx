@@ -2,16 +2,14 @@ import React, { useState, useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import Client from "../components/Client";
 import Editor from "../components/Editor";
-import { language, cmtheme, username, data } from "../atoms";
+import { language, cmtheme, data } from "../atoms";
 import {
   useRecoilState,
-  useRecoilValue,
   useResetRecoilState,
 } from "recoil";
 import ACTIONS from "../actions/Actions";
 import { initSocket } from "../socket";
 import {
-  useLocation,
   useNavigate,
   Navigate,
   useParams,
@@ -19,23 +17,26 @@ import {
 import { languageOptions } from "../constants/languageOptions";
 import axios from "axios";
 
+const API_BASE_URL =
+  import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+
 const EditorPage = () => {
   const [lang, setLang] = useRecoilState(language);
   const [them, setThem] = useRecoilState(cmtheme);
 
-  const codeData = useRecoilValue(data);
-  const user = useRecoilValue(username);
-
   const resetCode = useResetRecoilState(data);
 
   const [clients, setClients] = useState([]);
+  const [initialCode, setInitialCode] = useState("");
 
   const socketRef = useRef(null);
   const codeRef = useRef("");
 
-  const location = useLocation();
   const { roomId } = useParams();
-  const reactNavigator = useNavigate();
+  const navigate = useNavigate();
+
+  const token = localStorage.getItem("token");
+  if (!token) return <Navigate to="/login" />;
 
   // ================= SOCKET =================
   useEffect(() => {
@@ -46,24 +47,21 @@ const EditorPage = () => {
         socketRef.current.on("connect_error", handleErrors);
         socketRef.current.on("connect_failed", handleErrors);
 
-        socketRef.current.emit(ACTIONS.JOIN, {
-          roomId,
-          username: location.state?.username,
-        });
+        socketRef.current.emit(ACTIONS.JOIN, { roomId });
 
         socketRef.current.on(
           ACTIONS.JOINED,
           ({ clients, username, socketId }) => {
-            if (username !== location.state?.username) {
-              toast.success(`${username} joined the room`);
-            }
             setClients(clients);
 
-            socketRef.current.emit(ACTIONS.SYNC_CODE, {
-              code: codeRef.current,
-              socketId,
-            });
-          }
+         if (codeRef.current && codeRef.current.trim() !== "") {
+  socketRef.current.emit(ACTIONS.SYNC_CODE, {
+    code: codeRef.current,
+    socketId,
+  });
+         }
+        }
+
         );
 
         socketRef.current.on(
@@ -91,20 +89,69 @@ const EditorPage = () => {
     };
   }, []);
 
-  // ================= RESET CODE ON ROOM CHANGE =================
+  // Reset code on room change
+ useEffect(() => {
+  // Only reset if there is no saved code yet
+  if (!initialCode) {
+    resetCode();
+    codeRef.current = "";
+  }
+}, [roomId, initialCode]);
+
+
+  // ================= LOAD SAVED CODE =================
   useEffect(() => {
-    resetCode();           // 🔥 Clear Recoil editor state
-    codeRef.current = "";  // 🔥 Clear socket sync buffer
+    const loadSavedCode = async () => {
+      try {
+        const response = await axios.get(
+          `${API_BASE_URL}/record/fetch?roomId=${roomId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.data.code) {
+          setInitialCode(response.data.code);
+          codeRef.current = response.data.code;
+          toast.success("Loaded saved code");
+        }
+      } catch {
+        console.log("No saved code found");
+      }
+    };
+
+    loadSavedCode();
   }, [roomId]);
 
   const handleErrors = () => {
     toast.error("Socket connection failed");
-    reactNavigator("/");
+    navigate("/");
   };
 
-  if (!location.state) return <Navigate to="/" />;
+  // ================= SAVE CODE =================
+  const saveCode = async () => {
+    try {
+      await axios.post(
+        `${API_BASE_URL}/record/save`,
+        {
+          roomId,
+          code: codeRef.current,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-  // ================= HANDLERS =================
+      toast.success("Code saved");
+    } catch {
+      toast.error("Save failed");
+    }
+  };
+
   const handleChange = (e) => {
     const selected = languageOptions.find(
       (l) => l.value === e.target.value
@@ -124,25 +171,11 @@ const EditorPage = () => {
     }
   };
 
-  const leaveRoom = () => reactNavigator("/");
+  const leaveRoom = () => navigate("/");
 
-  const saveCode = async () => {
-    try {
-      await axios.post("http://localhost:5000/record/save", {
-        username: user,
-        roomId,
-        data: codeData,
-      });
-      toast.success("Code saved");
-    } catch {
-      toast.error("Save failed");
-    }
-  };
-
-  // ================= UI =================
+  // ================= UI (UNCHANGED) =================
   return (
     <div className="flex h-screen bg-[#020617] text-gray-200">
-      {/* ===== SIDEBAR ===== */}
       <aside className="w-72 min-w-[18rem] flex flex-col border-r border-white/10 p-4 overflow-y-auto">
         <h2 className="text-2xl font-extrabold text-center bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent mb-4">
           CodeFusion
@@ -211,12 +244,12 @@ const EditorPage = () => {
         </div>
       </aside>
 
-      {/* ===== EDITOR ===== */}
       <main className="flex-1 flex flex-col bg-[#0f172a] min-h-0">
         <div className="flex-1 overflow-hidden min-h-0">
           <Editor
             socketRef={socketRef}
             roomId={roomId}
+            initialCode={initialCode}
             onCodeChange={(code) => {
               codeRef.current = code;
             }}

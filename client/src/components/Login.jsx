@@ -29,8 +29,11 @@ const Login = () => {
       );
 
       if (response.status === 200) {
-        // LOGIC SAME (as requested)
-        localStorage.clear();
+
+        // 🔐 STORE JWT TOKEN
+        localStorage.setItem("token", response.data.token);
+
+        // Navigate after storing token
         navigate(`/dashboard/${data.username}`);
       }
     } catch (error) {

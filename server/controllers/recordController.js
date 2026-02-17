@@ -1,46 +1,53 @@
-import UserModel from "../models/UserSchema.js";
+import Record from "../models/Record.js";
 
-// ================= SAVE RECORD =================
-const saveRecord = async (req, res) => {
-  const { username, roomId, data } = req.body;
-
+export const saveRecord = async (req, res) => {
   try {
-    const user = await UserModel.findOne({ username });
+    const { roomId, code } = req.body;
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    if (!roomId || !code) {
+      return res.status(400).json({ msg: "Missing roomId or code" });
     }
 
-    // ❗ OLD LOGIC: always push (this is where bug comes from)
-    user.records.push({ roomId, data });
+    // Check if record already exists for this room
+    let record = await Record.findOne({ roomId });
 
-    await user.save();
+    if (record) {
+      // Update existing record
+      record.code = code;
+      record.updatedAt = Date.now();
+      await record.save();
+    } else {
+      // Create new record
+      record = new Record({ roomId, code });
+      await record.save();
+    }
 
-    return res.status(200).json({ message: "Record saved successfully" });
+    res.status(200).json({ msg: "Code saved successfully" });
+
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Error saving record" });
+    console.error("Error saving code:", error);
+    res.status(500).json({ msg: "Server error while saving code" });
   }
 };
 
-// ================= FETCH RECORD =================
-const fetchRecord = async (req, res) => {
+export const fetchRecord = async (req, res) => {
   try {
-    const { username } = req.body;
+    const { roomId } = req.query;
 
-    const user = await UserModel.findOne({ username });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    if (!roomId) {
+      return res.status(400).json({ msg: "Missing roomId" });
     }
 
-    return res.status(200).json({
-      records: user.records,
-    });
+    const record = await Record.findOne({ roomId });
+
+    if (!record) {
+      return res.status(404).json({ msg: "No saved code found" });
+    }
+
+    res.status(200).json({ code: record.code });
+
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Error fetching records" });
+    console.error("Error fetching code:", error);
+    res.status(500).json({ msg: "Server error while fetching code" });
   }
 };
-
-export { saveRecord, fetchRecord };
